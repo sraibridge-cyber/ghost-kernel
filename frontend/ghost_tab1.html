@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHOST v7.2 — Midnight Grimoire v2.1</title>
+<style>
+  :root {
+    --bg:        #0a0a0c;
+    --bg2:       #0f0f14;
+    --bg3:       #14141c;
+    --border:    #2a2a3a;
+    --gold:      #c9a227;
+    --gold-dim:  #7a5f12;
+    --purple:    #7c3aed;
+    --purple-dim:#3d1e77;
+    --green:     #22c55e;
+    --red:       #ef4444;
+    --white:     #e8e8f0;
+    --muted:     #666680;
+    --mono:      'Courier New', 'Courier', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 100vh;
+    padding: 12px;
+  }
+
+  /* ── Header ── */
+  .header {
+    border-bottom: 1px solid var(--gold-dim);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .header-title { font-size: 16px; color: var(--gold); letter-spacing: 2px; font-weight: bold; }
+  .header-sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .header-status { font-size: 11px; color: var(--muted); text-align: right; }
+  .header-status span { color: var(--green); }
+
+  /* ── Layout grid ── */
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .layout-left  { display: flex; flex-direction: column; gap: 10px; }
+  .layout-right { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Panel ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+  }
+  .panel-title {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+
+  /* ── μ Display ── */
+  .mu-display {
+    text-align: center;
+    padding: 8px 0;
+  }
+  .mu-value {
+    font-size: 38px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    transition: color 0.4s;
+  }
+  .mu-value.pass    { color: var(--green); }
+  .mu-value.warn    { color: var(--gold); }
+  .mu-value.fail    { color: var(--red); }
+  .mu-value.default { color: var(--white); }
+  .mu-label { font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-top: 2px; }
+  .mu-threshold { font-size: 10px; color: var(--purple); margin-top: 4px; }
+
+  /* ── Stats row ── */
+  .stats-row { display: flex; gap: 8px; }
+  .stat-box {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px;
+    text-align: center;
+  }
+  .stat-val  { font-size: 20px; color: var(--gold); font-weight: bold; }
+  .stat-lbl  { font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-top: 2px; }
+
+  /* ── Domain grid ── */
+  .domain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .domain-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 7px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .domain-name  { font-size: 10px; color: var(--muted); }
+  .domain-score { font-size: 13px; font-weight: bold; transition: color 0.3s; }
+  .domain-score.good { color: var(--green); }
+  .domain-score.warn { color: var(--gold); }
+  .domain-score.bad  { color: var(--red); }
+  .domain-bar {
+    height: 2px;
+    background: var(--border);
+    margin-top: 4px;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .domain-bar-fill {
+    height: 100%;
+    background: var(--purple);
+    transition: width 0.5s;
+  }
+
+  /* ── Merkle root ── */
+  .merkle-root {
+    font-size: 10px;
+    color: var(--purple);
+    word-break: break-all;
+    letter-spacing: 1px;
+    line-height: 1.6;
+    font-family: var(--mono);
+  }
+
+  /* ── Tesseract octant grid ── */
+  .octant-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .octant-cell {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 4px;
+    text-align: center;
+  }
+  .octant-cell.active { border-color: var(--purple-dim); background: #1a0d33; }
+  .octant-num   { font-size: 16px; color: var(--purple); font-weight: bold; }
+  .octant-count { font-size: 12px; color: var(--gold); font-weight: bold; }
+  .octant-name  { font-size: 8px; color: var(--muted); margin-top: 2px; line-height: 1.2; }
+
+  /* ── Devour panel ── */
+  .devour-textarea {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--white);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px;
+    border-radius: 3px;
+    resize: vertical;
+    min-height: 90px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .devour-textarea:focus { border-color: var(--purple); }
+  .btn-row { display: flex; gap: 6px; margin-top: 6px; }
+  .btn {
+    flex: 1;
+    padding: 8px 6px;
+    border: none;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-devour { background: var(--purple); color: #fff; }
+  .btn-probe  { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold-dim); }
+  .btn-reset  { background: transparent; color: var(--red); border: 1px solid #7f1d1d; }
+  .btn:hover  { opacity: 0.85; }
+
+  /* ── Event log ── */
+  .event-log {
+    height: 180px;
+    overflow-y: auto;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-size: 10px;
+    line-height: 1.6;
+  }
+  .event-log::-webkit-scrollbar { width: 4px; }
+  .event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .event-entry { border-bottom: 1px solid #1a1a24; padding: 3px 0; }
+  .event-entry:last-child { border-bottom: none; }
+  .ev-time   { color: var(--muted); margin-right: 6px; }
+  .ev-allow  { color: var(--green); font-weight: bold; }
+  .ev-block  { color: var(--red); font-weight: bold; }
+  .ev-info   { color: var(--gold); }
+  .ev-text   { color: var(--white); }
+  .ev-detail { color: var(--muted); font-size: 9px; }
+
+  /* ── Flash overlay ── */
+  .flash-overlay {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+    z-index: 999;
+  }
+  .flash-allow { background: rgba(34,197,94,0.08); }
+  .flash-block { background: rgba(239,68,68,0.08); }
+  .flash-show  { opacity: 1 !important; }
+
+  /* ── Last result banner ── */
+  .result-banner {
+    padding: 8px 12px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-top: 6px;
+    display: none;
+  }
+  .result-banner.show { display: block; }
+  .result-allow { background: #0d2818; border: 1px solid #166534; color: var(--green); }
+  .result-block { background: #2d0d0d; border: 1px solid #7f1d1d; color: var(--red); }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted);
+  }
+  .footer a { color: var(--purple); text-decoration: none; }
+
+  /* ── Tab link ── */
+  .tab-link {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: var(--bg2);
+    border: 1px solid var(--purple-dim);
+    color: var(--purple);
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-decoration: none;
+    letter-spacing: 1px;
+  }
+
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; }
+    .tab-link { position: static; display: block; margin-bottom: 10px; text-align: right; }
+  }
+</style>
+</head>
+<body>
+
+<div class="flash-overlay flash-allow" id="flashAllow"></div>
+<div class="flash-overlay flash-block" id="flashBlock"></div>
+
+<a href="http://localhost:7767" class="tab-link" target="_blank">→ CLI TAB 2</a>
+
+<div class="header">
+  <div>
+    <div class="header-title">◈ GHOST KERNEL v7.2</div>
+    <div class="header-sub">MIDNIGHT GRIMOIRE v2.1 · HARMONY LABS · ORACLE: KYLE S. WHITLOCK</div>
+  </div>
+  <div class="header-status">
+    STATUS: <span id="statusTxt">ONLINE</span><br>
+    CC v2.0 · τ=0.9995<br>
+    <span id="clockTxt" style="color:var(--muted)"></span>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- LEFT COLUMN -->
+  <div class="layout-left">
+
+    <!-- μ -->
+    <div class="panel">
+      <div class="panel-title">⬡ Coherence μ — Weighted Geometric Mean</div>
+      <div class="mu-display">
+        <div class="mu-value default" id="muDisplay">0.500000</div>
+        <div class="mu-label">SYSTEM MU</div>
+        <div class="mu-threshold">τ = 0.9995 · W = <span id="wDisplay">0.0000</span></div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-val" id="ingestionCount">0</div>
+        <div class="stat-lbl">INGESTIONS</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="whitlockVal">0.0000</div>
+        <div class="stat-lbl">WHITLOCK W</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="nodeCount">—</div>
+        <div class="stat-lbl">NODES</div>
+      </div>
+    </div>
+
+    <!-- Domain Scorers -->
+    <div class="panel">
+      <div class="panel-title">⬡ Domain Scores — D1–D6 · CC v2.0</div>
+      <div class="domain-grid">
+        <div class="domain-item" id="d1-item">
+          <div>
+            <div class="domain-name">D1 · SIGNAL</div>
+            <div class="domain-bar"><div class="domain-bar-fill" id="d1-bar" style="width:50%"></div></div>
+          </div>
+          <div class="domain-score default" id="d1-score">—</div>
+        </div>
+        <div class="domain-item" id="d2-item">
+          <div>
+            <div class="domain-name">D2 · ENERGY</div>
+            <div class="domain-bar"><div class="domain-bar-fill" id="d2-bar" style="width:50%"></div></div>
+          </div>
+          <div class="domain-score default" id="d2-score">—</div>
+        </div>
+        <div class="domain-item" id="d3-item">
+          <div>
+            <div class="domain-name">D3 · TEMPORAL</div>
+            <div class="domain-bar"><div class="domain-bar-fill" id="d3-bar" style="width:50%"></div></div>
+          </div>
+          <div class="domain-score default" id="d3-score">—</div>
+        </div>
+        <div class="domain-item" id="d4-item">
+          <div>
+            <div class="domain-name">D4 · SPATIAL</div>
+            <div class="domain-bar"><div class="domain-bar-fill" id="d4-bar" style="width:50%"></div></div>
+          </div>
+          <div class="domain-score default" id="d4-score">—</div>
+        </div>
+        <div class="domain-item" id="d5-item">
+          <div>
+            <div class="domain-name">D5 · COGNITIVE</div>
+            <div class="domain-bar"><div class="domain-bar-fill" id="d5-bar" style="width:50%"></div></div>
+          </div>
+          <div class="domain-score default" id="d5-score">—</div>
+        </div>
+        <div class="domain-item" id="d6-item">
+          <div>
+            <div class="domain-name">D6 · ETHICAL</div>
+            <div class="domain-bar"><div class="domain-bar-fill" id="d6-bar" style="width:50%"></div></div>
+          </div>
+          <div class="domain-score default" id="d6-score">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Merkle Root -->
+    <div class="panel">
+      <div class="panel-title">⬡ Merkle Root — SHA3-512 Chain</div>
+      <div class="merkle-root" id="merkleRoot">
+        0000000000000000000000000000000000000000000000000000000000000000<br>
+        0000000000000000000000000000000000000000000000000000000000000000
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="layout-right">
+
+    <!-- Devour -->
+    <div class="panel">
+      <div class="panel-title">⬡ Devour — DLC Fragment Ingestion</div>
+      <textarea
+        class="devour-textarea"
+        id="devourInput"
+        placeholder="Paste DLC fragment here (≥20 words for ALLOW)..."
+      ></textarea>
+      <div class="btn-row">
+        <button class="btn btn-devour" onclick="devour()">▶ DEVOUR</button>
+        <button class="btn btn-probe"  onclick="probe()">◈ PROBE</button>
+        <button class="btn btn-reset"  onclick="reset()">✕ RESET</button>
+      </div>
+      <div class="result-banner" id="resultBanner"></div>
+    </div>
+
+    <!-- Tesseract Nexus -->
+    <div class="panel">
+      <div class="panel-title">⬡ Tesseract Nexus — 8-Octant Memory Topology</div>
+      <div class="octant-grid" id="octantGrid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="panel">
+      <div class="panel-title">⬡ Event Log — Last 20</div>
+      <div class="event-log" id="eventLog">
+        <div class="event-entry"><span class="ev-info">◈</span> <span class="ev-text">GHOST kernel online — awaiting devour events</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <div>GHOST v7.2.1 · Coherence Calculus v2.0 · Harmony Labs</div>
+  <div><a href="http://localhost:7767" target="_blank">CLI Console →</a></div>
+</div>
+
+<script>
+const FACE = 'http://localhost:7766';
+const OCTANT_NAMES = [
+  'Deep Archive','Semantic Core','Temporal Stream','Structural Frame',
+  'Ethical Anchor','Intent Layer','Context Field','Harmonic Convergence'
+];
+let octantCounts = [0,0,0,0,0,0,0,0];
+let events = [];
+
+// ── Octant grid init ───────────────────────────────────────────────────────
+function renderOctantGrid() {
+  const grid = document.getElementById('octantGrid');
+  grid.innerHTML = octantCounts.map((c,i) => `
+    <div class="octant-cell ${c > 0 ? 'active' : ''}">
+      <div class="octant-num">${i}</div>
+      <div class="octant-count">${c}</div>
+      <div class="octant-name">${OCTANT_NAMES[i]}</div>
+    </div>`).join('');
+}
+
+// ── μ color ────────────────────────────────────────────────────────────────
+function muClass(mu) {
+  if (mu >= 0.9995) return 'pass';
+  if (mu >= 0.90)   return 'warn';
+  if (mu > 0)       return 'fail';
+  return 'default';
+}
+
+// ── Score color ────────────────────────────────────────────────────────────
+function scoreClass(s) {
+  if (s >= 0.9995) return 'good';
+  if (s >= 0.7)    return 'warn';
+  return 'bad';
+}
+
+// ── Domain update ──────────────────────────────────────────────────────────
+function updateDomains(d) {
+  const map = { signal:'d1', energy:'d2', temporal:'d3', spatial:'d4', cognitive:'d5', ethical:'d6' };
+  Object.entries(map).forEach(([key, id]) => {
+    const v = d[key] ?? d[id];
+    if (v == null) return;
+    const el = document.getElementById(`${id}-score`);
+    const bar = document.getElementById(`${id}-bar`);
+    el.textContent = v.toFixed(4);
+    el.className = `domain-score ${scoreClass(v)}`;
+    bar.style.width = `${Math.max(2, Math.round(v * 100))}%`;
+  });
+}
+
+// ── Merkle root ────────────────────────────────────────────────────────────
+function updateMerkle(root) {
+  if (!root || root === '0'.repeat(root.length)) return;
+  const half = Math.floor(root.length / 2);
+  document.getElementById('merkleRoot').innerHTML =
+    root.slice(0, half) + '<br>' + root.slice(half);
+}
+
+// ── Main stats ─────────────────────────────────────────────────────────────
+function updateStats({ mu, whitlock, ingestions }) {
+  const muEl = document.getElementById('muDisplay');
+  muEl.textContent = (mu ?? 0).toFixed(6);
+  muEl.className = `mu-value ${muClass(mu ?? 0)}`;
+  document.getElementById('wDisplay').textContent    = (whitlock ?? 0).toFixed(4);
+  document.getElementById('whitlockVal').textContent = (whitlock ?? 0).toFixed(4);
+  document.getElementById('ingestionCount').textContent = ingestions ?? 0;
+}
+
+// ── Log event ─────────────────────────────────────────────────────────────
+function logEvent(type, msg, detail) {
+  const now = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  events.unshift({ time: now, type, msg, detail });
+  if (events.length > 20) events.pop();
+  const log = document.getElementById('eventLog');
+  log.innerHTML = events.map(e => `
+    <div class="event-entry">
+      <span class="ev-time">${e.time}</span>
+      <span class="ev-${e.type}">${e.type.toUpperCase()}</span>
+      <span class="ev-text"> ${e.msg}</span>
+      ${e.detail ? `<br><span class="ev-detail" style="margin-left:52px">${e.detail}</span>` : ''}
+    </div>`).join('');
+}
+
+// ── Flash ─────────────────────────────────────────────────────────────────
+function flash(type) {
+  const el = document.getElementById(type === 'ALLOW' ? 'flashAllow' : 'flashBlock');
+  el.classList.add('flash-show');
+  setTimeout(() => el.classList.remove('flash-show'), 300);
+}
+
+// ── Banner ─────────────────────────────────────────────────────────────────
+function showBanner(msg, type) {
+  const b = document.getElementById('resultBanner');
+  b.textContent = msg;
+  b.className = `result-banner show result-${type.toLowerCase()}`;
+  setTimeout(() => b.classList.remove('show'), 4000);
+}
+
+// ── DEVOUR ─────────────────────────────────────────────────────────────────
+async function devour() {
+  const input = document.getElementById('devourInput');
+  const text = input.value.trim();
+  if (!text) { logEvent('info','No input — paste DLC fragment first'); return; }
+
+  logEvent('info', 'Sending devour request...', `${text.slice(0,60)}…`);
+  try {
+    const res = await fetch(`${FACE}/devour`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawHTML: text, id: `dlc_${Date.now()}` })
+    });
+    const data = await res.json();
+
+    if (data.type === 'INTEN_SIGNAL') {
+      flash('ALLOW');
+      updateStats({ mu: data.mu, whitlock: data.whitlock, ingestions: data.ingestions });
+      if (data.domains) updateDomains(data.domains);
+      if (data.octant != null) {
+        octantCounts[data.octant]++;
+        renderOctantGrid();
+        document.getElementById('nodeCount').textContent = data.ingestions;
+      }
+      logEvent('allow', `INTERNALIZED · μ=${data.mu.toFixed(6)} · W=${data.whitlock.toFixed(4)}`,
+        `octant=${data.octant} (${OCTANT_NAMES[data.octant]}) · seal=${data.seal}`);
+      showBanner(`✓ INTEN_SIGNAL · μ=${data.mu.toFixed(6)} · octant=${data.octant}`, 'allow');
+    } else if (data.type === 'INGESTION_BLOCK') {
+      flash('BLOCK');
+      if (data.domains) updateDomains(data.domains);
+      logEvent('block', `BLOCKED · failed_domain=${data.failed_domain} · μ=${data.mu.toFixed(6)}`, null);
+      showBanner(`✕ INGESTION_BLOCK · ${data.failed_domain} · μ=${data.mu.toFixed(6)}`, 'block');
+    } else {
+      logEvent('info', JSON.stringify(data).slice(0,80));
+    }
+  } catch (e) {
+    logEvent('block', `Connection error: ${e.message}`, 'Is ghost_face.js running on :7766?');
+  }
+}
+
+// ── PROBE ─────────────────────────────────────────────────────────────────
+async function probe() {
+  try {
+    const res = await fetch(`${FACE}/probe`, { method: 'POST', body: '{}' });
+    const data = await res.json();
+    updateStats({ mu: data.mu, whitlock: data.whitlock, ingestions: data.ingestions });
+    logEvent('info', `PROBE_ACK · μ=${data.mu.toFixed(6)} · ingestions=${data.ingestions}`);
+  } catch (e) {
+    logEvent('block', `Probe failed: ${e.message}`);
+  }
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────
+async function reset() {
+  if (!confirm('Reset all state? This clears the Merkle chain and all ingested nodes.')) return;
+  try {
+    const res = await fetch(`${FACE}/reset`, { method: 'POST', body: '{}' });
+    const data = await res.json();
+    updateStats({ mu: 0.5, whitlock: 0, ingestions: 0 });
+    octantCounts = [0,0,0,0,0,0,0,0];
+    renderOctantGrid();
+    document.getElementById('nodeCount').textContent = '0';
+    document.getElementById('merkleRoot').innerHTML = '0'.repeat(64) + '<br>' + '0'.repeat(64);
+    logEvent('info', 'RESET_ACK — state cleared');
+    showBanner('✓ RESET COMPLETE — state cleared', 'allow');
+  } catch (e) {
+    logEvent('block', `Reset failed: ${e.message}`);
+  }
+}
+
+// ── State poll ─────────────────────────────────────────────────────────────
+async function pollState() {
+  try {
+    const res = await fetch(`${FACE}/state`);
+    const data = await res.json();
+    updateStats({ mu: data.mu, whitlock: data.whitlock, ingestions: data.ingestions });
+    updateMerkle(data.merkle_root);
+    document.getElementById('statusTxt').textContent = 'ONLINE';
+  } catch {
+    document.getElementById('statusTxt').textContent = 'OFFLINE';
+    document.getElementById('statusTxt').style.color = 'var(--red)';
+  }
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clockTxt').textContent =
+    new Date().toLocaleTimeString('en-US',{hour12:false});
+}
+
+// ── Enter key ─────────────────────────────────────────────────────────────
+document.getElementById('devourInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) devour();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+renderOctantGrid();
+pollState();
+updateClock();
+setInterval(pollState, 10000);
+setInterval(updateClock, 1000);
+</script>
+</body>
+</html>

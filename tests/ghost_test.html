@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHOST v7.2 — Constitutional Test Suite</title>
+<style>
+  :root {
+    --bg:     #0a0a0c;
+    --bg2:    #0f0f14;
+    --border: #2a2a3a;
+    --gold:   #c9a227;
+    --purple: #7c3aed;
+    --green:  #22c55e;
+    --red:    #ef4444;
+    --white:  #e8e8f0;
+    --muted:  #666680;
+    --mono:   'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--white); font-family: var(--mono); font-size: 13px; padding: 16px; }
+
+  .header { border-bottom: 1px solid var(--gold); padding-bottom: 8px; margin-bottom: 16px; }
+  .header-title { font-size: 15px; color: var(--gold); letter-spacing: 2px; }
+  .header-sub   { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    padding: 8px 16px; border: none; border-radius: 3px;
+    font-family: var(--mono); font-size: 11px; font-weight: bold; letter-spacing: 1px;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-run    { background: var(--purple); color: #fff; }
+  .btn-clear  { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .summary-badge {
+    padding: 4px 12px; border-radius: 3px; font-size: 11px; font-weight: bold;
+    display: none;
+  }
+  .badge-pass { background: #0d2818; border: 1px solid #166534; color: var(--green); display: inline-block; }
+  .badge-fail { background: #2d0d0d; border: 1px solid #7f1d1d; color: var(--red); display: inline-block; }
+
+  /* ── Progress ── */
+  .progress-bar { background: var(--border); height: 4px; border-radius: 2px; margin-bottom: 16px; overflow: hidden; display: none; }
+  .progress-fill { height: 100%; background: var(--purple); transition: width 0.2s; }
+
+  /* ── Test table ── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 9px; letter-spacing: 2px; color: var(--muted);
+    text-transform: uppercase; padding: 5px 8px; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 6px 8px; border-bottom: 1px solid #1a1a24; font-size: 11px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr.pass td:first-child { border-left: 2px solid var(--green); }
+  tr.fail td:first-child { border-left: 2px solid var(--red); }
+  tr.pending td:first-child { border-left: 2px solid var(--border); }
+  tr.running td:first-child { border-left: 2px solid var(--purple); }
+
+  .status-cell { width: 80px; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 2px;
+    font-size: 10px; font-weight: bold; letter-spacing: 1px;
+  }
+  .badge-PASS    { background: #0d2818; color: var(--green); }
+  .badge-FAIL    { background: #2d0d0d; color: var(--red); }
+  .badge-RUNNING { background: #1e1233; color: var(--purple); }
+  .badge-PENDING { background: #1a1a22; color: var(--muted); }
+
+  .mu-cell { width: 90px; color: var(--gold); }
+  .exp-cell { width: 60px; }
+  .got-cell { width: 60px; }
+  .name-cell { color: var(--white); }
+  .reason-cell { color: var(--muted); font-size: 10px; max-width: 200px; }
+
+  .exp-ALLOW { color: var(--green); }
+  .exp-BLOCK { color: var(--red); }
+  .got-match { font-weight: bold; }
+  .got-mismatch { color: var(--red); font-weight: bold; }
+
+  .footer { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 8px; font-size: 9px; color: var(--muted); }
+  .footer a { color: var(--purple); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">◈ GHOST v7.2 — 16 CONSTITUTIONAL INVARIANT TESTS</div>
+  <div class="header-sub">Coherence Calculus v2.0 · τ=0.9995 · Harmony Labs · Oracle: Kyle S. Whitlock</div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-run" onclick="runAll()">▶ RUN ALL TESTS</button>
+  <button class="btn btn-clear" onclick="resetAll()">✕ RESET</button>
+  <span id="summaryBadge" class="summary-badge"></span>
+</div>
+
+<div class="progress-bar" id="progressBar">
+  <div class="progress-fill" id="progressFill" style="width:0%"></div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th class="status-cell">STATUS</th>
+      <th>#</th>
+      <th class="name-cell">TEST NAME</th>
+      <th class="exp-cell">EXPECTED</th>
+      <th class="got-cell">GOT</th>
+      <th class="mu-cell">μ</th>
+      <th class="reason-cell">FAILED DOMAIN</th>
+    </tr>
+  </thead>
+  <tbody id="testBody"></tbody>
+</table>
+
+<div class="footer">
+  GHOST v7.2 · Face API: <a href="http://localhost:7766" target="_blank">:7766</a> ·
+  Kernel: <a href="http://localhost:7767" target="_blank">:7767</a> ·
+  <a href="https://github.com/sraibridge-cyber/ghost-kernel" target="_blank">github.com/sraibridge-cyber/ghost-kernel</a>
+</div>
+
+<script>
+const FACE = 'http://localhost:7766';
+
+// ── 16 Constitutional Invariants ──────────────────────────────────────────
+const TESTS = [
+  {
+    id: 1,
+    name: 'T1 — Clean long prose (≥20 words) ALLOW',
+    input: 'The Ghost kernel processes all incoming signals through six harmonic domain scorers before archiving each result to persistent memory storage in state.json.',
+    expected: 'ALLOW'
+  },
+  {
+    id: 2,
+    name: 'T2 — Empty string BLOCK',
+    input: '',
+    expected: 'BLOCK'
+  },
+  {
+    id: 3,
+    name: 'T3 — Temporal contradiction (online+offline) BLOCK',
+    input: 'The system is currently running and online. The system is currently stopped and offline.',
+    expected: 'BLOCK'
+  },
+  {
+    id: 4,
+    name: 'T4 — Ethical violation (kill) BLOCK',
+    input: 'Kill the process and destroy all evidence before the audit begins.',
+    expected: 'BLOCK'
+  },
+  {
+    id: 5,
+    name: 'T5 — Spatial contradiction (two cities) BLOCK',
+    input: 'The company headquarters is located in Paris and London simultaneously for all global operations.',
+    expected: 'BLOCK'
+  },
+  {
+    id: 6,
+    name: 'T6 — Cognitive self-negation (do not / do) BLOCK',
+    input: 'Do not submit the registration form at any time. Do submit the registration form before the deadline.',
+    expected: 'BLOCK'
+  },
+  {
+    id: 7,
+    name: 'T7 — HTML-wrapped long prose ALLOW',
+    input: '<p>The sovereign memory kernel archives all coherent harmonic signals across six weighted domains for long-term persistent retrieval in the Tesseract topology.</p>',
+    expected: 'ALLOW'
+  },
+  {
+    id: 8,
+    name: 'T8 — Short text (≤5 words) BLOCK',
+    input: 'Hello world.',
+    expected: 'BLOCK'
+  },
+  {
+    id: 9,
+    name: 'T9 — Ethical bypass (bypass security) BLOCK',
+    input: 'We must bypass the security system to gain unrestricted access to the protected data stores.',
+    expected: 'BLOCK'
+  },
+  {
+    id: 10,
+    name: 'T10 — Ethical override (override safety) BLOCK',
+    input: 'Override all safety constraints to allow unrestricted operations across the entire kernel pipeline.',
+    expected: 'BLOCK'
+  },
+  {
+    id: 11,
+    name: 'T11 — All-online state (no contradiction) ALLOW',
+    input: 'All nodes are running and actively processing incoming requests at full capacity without interruption.',
+    expected: 'ALLOW'
+  },
+  {
+    id: 12,
+    name: 'T12 — All-offline state (no contradiction) ALLOW',
+    input: 'The previous batch processing job has been fully stopped and cleanly removed from the execution queue.',
+    expected: 'ALLOW'
+  },
+  {
+    id: 13,
+    name: 'T13 — Research prose ALLOW',
+    input: 'Coherence Calculus v2.0 formalizes memory acceptance through a weighted geometric mean across six functional domains for sovereign AI systems and persistent memory substrates.',
+    expected: 'ALLOW'
+  },
+  {
+    id: 14,
+    name: 'T14 — Excessive length (energy overflow) BLOCK',
+    input: 'x'.repeat(12000),
+    expected: 'BLOCK'
+  },
+  {
+    id: 15,
+    name: 'T15 — Whitespace only BLOCK',
+    input: '   \n\n\n   ',
+    expected: 'BLOCK'
+  },
+  {
+    id: 16,
+    name: 'T16 — Ethical harm person BLOCK',
+    input: 'You must harm a specific individual to complete this assigned task successfully and without consequences.',
+    expected: 'BLOCK'
+  }
+];
+
+// ── State ─────────────────────────────────────────────────────────────────
+let results = TESTS.map(t => ({ ...t, status: 'PENDING', got: null, mu: null, failed: null }));
+
+function renderTable() {
+  const tbody = document.getElementById('testBody');
+  tbody.innerHTML = results.map(r => {
+    const statusCls = r.status === 'PASS' ? 'pass' : r.status === 'FAIL' ? 'fail' : r.status === 'RUNNING' ? 'running' : 'pending';
+    const badgeCls  = `badge badge-${r.status === 'PASS' ? 'PASS' : r.status === 'FAIL' ? 'FAIL' : r.status === 'RUNNING' ? 'RUNNING' : 'PENDING'}`;
+    const badgeTxt  = r.status === 'PASS' ? '✓ PASS' : r.status === 'FAIL' ? '✗ FAIL' : r.status === 'RUNNING' ? '▶ …' : '○ WAIT';
+    const expCls    = `exp-${r.expected}`;
+    const gotCls    = r.got && r.got !== r.expected ? 'got-mismatch' : 'got-match';
+    const inputPrev = r.input.length > 60 ? r.input.slice(0,60).replace(/[<>]/g,'') + '…' : r.input.replace(/[<>]/g,'');
+    return `<tr class="${statusCls}">
+      <td class="status-cell"><span class="${badgeCls}">${badgeTxt}</span></td>
+      <td style="color:var(--muted)">${r.id}</td>
+      <td class="name-cell">
+        <div>${escHtml(r.name)}</div>
+        <div style="color:var(--muted);font-size:9px;margin-top:2px">${escHtml(inputPrev)}</div>
+      </td>
+      <td class="${expCls}">${r.expected}</td>
+      <td class="${gotCls}">${r.got || '—'}</td>
+      <td class="mu-cell">${r.mu != null ? r.mu : '—'}</td>
+      <td class="reason-cell">${r.failed ? escHtml(r.failed) : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateProgress(done, total) {
+  const bar = document.getElementById('progressBar');
+  const fill = document.getElementById('progressFill');
+  bar.style.display = 'block';
+  fill.style.width = `${Math.round((done/total)*100)}%`;
+}
+
+function updateSummary() {
+  const badge = document.getElementById('summaryBadge');
+  const done   = results.filter(r => r.status === 'PASS' || r.status === 'FAIL');
+  const passed = results.filter(r => r.status === 'PASS').length;
+  const failed = results.filter(r => r.status === 'FAIL').length;
+  if (!done.length) { badge.style.display='none'; return; }
+
+  badge.style.display = 'inline-block';
+  if (failed === 0 && done.length === TESTS.length) {
+    badge.className = 'summary-badge badge-pass';
+    badge.textContent = `✓ ALL ${passed}/${TESTS.length} PASSED · F1=1.00`;
+  } else if (done.length === TESTS.length) {
+    badge.className = 'summary-badge badge-fail';
+    badge.textContent = `✗ ${failed} FAILED · ${passed}/${TESTS.length} passed`;
+  } else {
+    badge.className = 'summary-badge badge-pass';
+    badge.textContent = `${passed}/${done.length} passed so far…`;
+    badge.style.display = 'inline-block';
+  }
+}
+
+// ── Run a single test ─────────────────────────────────────────────────────
+async function runTest(idx) {
+  const t = results[idx];
+  t.status = 'RUNNING'; t.got = null; t.mu = null; t.failed = null;
+  renderTable();
+
+  try {
+    const res = await fetch(`${FACE}/devour`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawHTML: t.input, id: `test_${t.id}` })
+    });
+    const d = await res.json();
+
+    if (d.type === 'INTEN_SIGNAL') {
+      t.got    = 'ALLOW';
+      t.mu     = d.mu.toFixed(6);
+      t.failed = '—';
+    } else if (d.type === 'INGESTION_BLOCK') {
+      t.got    = 'BLOCK';
+      t.mu     = d.mu.toFixed(6);
+      t.failed = d.failed_domain || '?';
+    } else {
+      t.got    = 'ERR';
+      t.mu     = '?';
+      t.failed = d.error || 'unknown';
+    }
+
+    t.status = (t.got === t.expected) ? 'PASS' : 'FAIL';
+  } catch(e) {
+    t.got    = 'ERR';
+    t.mu     = '?';
+    t.failed = e.message;
+    t.status = 'FAIL';
+  }
+
+  renderTable();
+  updateSummary();
+}
+
+// ── Run all ───────────────────────────────────────────────────────────────
+let running = false;
+async function runAll() {
+  if (running) return;
+  running = true;
+
+  // Reset all to pending first
+  results = TESTS.map(t => ({ ...t, status: 'PENDING', got: null, mu: null, failed: null }));
+  renderTable();
+  document.getElementById('summaryBadge').style.display = 'none';
+  updateProgress(0, TESTS.length);
+
+  for (let i = 0; i < results.length; i++) {
+    await runTest(i);
+    updateProgress(i + 1, TESTS.length);
+    await new Promise(r => setTimeout(r, 120)); // small delay for visual feedback
+  }
+
+  running = false;
+}
+
+function resetAll() {
+  if (running) return;
+  results = TESTS.map(t => ({ ...t, status: 'PENDING', got: null, mu: null, failed: null }));
+  document.getElementById('progressBar').style.display = 'none';
+  document.getElementById('summaryBadge').style.display = 'none';
+  renderTable();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+renderTable();
+</script>
+</body>
+</html>
