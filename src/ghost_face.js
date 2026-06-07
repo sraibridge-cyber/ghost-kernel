@@ -28,7 +28,7 @@ function loadState() {
     try {
         return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
     } catch {
-        return { merkle_root: '0'.repeat(128), mu: 0.5, ingestions: 0, whitlock: 0, nodes: [] };
+        return { merkle_root: '0'.repeat(128), mu: 0.5, ingestions: 0, whitlock: 0.176471, nodes: [] };
     }
 }
 
@@ -143,7 +143,7 @@ const server = http.createServer((req, res) => {
 
     // ── POST /reset → clear state ──────────────────────────────────────────
     if (req.method === 'POST' && url === '/reset') {
-        saveState({ merkle_root: '0'.repeat(128), mu: 0.5, ingestions: 0, whitlock: 0, nodes: [] });
+        saveState({ merkle_root: '0'.repeat(128), mu: 0.5, ingestions: 0, whitlock: 0.176471, nodes: [] });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ type: 'RESET_ACK', ts: Date.now() }));
         return;

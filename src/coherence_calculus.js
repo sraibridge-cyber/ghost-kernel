@@ -117,11 +117,35 @@ function weakestDomain(signals) {
 }
 
 // ── Whitlock Coefficient ─────────────────────────────────────────────────────
-// W = (n + 3i) / 17   where n = min(wordCount/100, 1.0), i = ingestion count
-function computeWhitlock(text, ingestions) {
-    const wordCount = text.trim().split(/\s+/).length;
-    const n = Math.min(wordCount / 100, 1.0);
-    return (n + 3 * ingestions) / 17;
+// W = (n + 3i) / 17   [Whitlock, 2026]
+//
+//   n  = ingestion count (real part — the kernel's own ALLOW event counter)
+//   3i = topological constant (imaginary component, magnitude = 3 Tesseract axes)
+//   17 = normalization by Kyle's 17 Laws framework
+//
+// Scalar used in computation:   |W| = √(n² + 9) / 17
+// Phase (system maturity angle): φ  = arctan(3/n)
+//
+//   φ = π/2 (≈90°) at n=0  — kernel is in Foundation state (pure imaginary)
+//   φ → 0° as n grows       — kernel matures toward real/declarative state
+//
+// WHAT GENERATES n:
+//   n is the kernel's own deterministic ingestion counter. It is not
+//   AI-generated, not a hash, not a lookup. Every ALLOW event increments n
+//   by exactly 1. n is observable, reproducible, and self-measured.
+//
+// WHAT 3i IS:
+//   3i is a deliberate structural constant chosen to encode the three binary
+//   axes of the Tesseract memory topology. It is not a universal physical
+//   constant — it is a design constant grounded in the system's own geometry.
+//
+// INITIAL VALUE (n=0):  |W| = √(0+9)/17 = 3/17 ≈ 0.1765
+//   (kernel starts in pure Foundation state — no real accumulated coherence yet)
+function computeWhitlock(ingestions) {
+    const n         = ingestions;                               // real part: ALLOW count
+    const magnitude = Math.sqrt(n * n + 9) / 17;               // |W| = √(n²+9) / 17
+    const phase     = n === 0 ? Math.PI / 2 : Math.atan(3 / n);// φ = arctan(3/n)
+    return { magnitude, phase, n };
 }
 
 // ── Full pipeline: HTML → decision ───────────────────────────────────────────
@@ -129,10 +153,10 @@ function evaluateDLC(rawHtml, ingestions = 0) {
     const signals = scoreDomains(rawHtml);
     const mu      = computeMu(signals);
     const failed  = weakestDomain(signals);
-    const whitlock = computeWhitlock(signals._text, ingestions);
+    const W        = computeWhitlock(ingestions);
     const decision = mu >= MU_THRESHOLD ? 'ALLOW' : 'BLOCK';
 
-    return { decision, mu, signals, failed, whitlock };
+    return { decision, mu, signals, failed, whitlock: W.magnitude, whitlock_phase: W.phase };
 }
 
 module.exports = {
