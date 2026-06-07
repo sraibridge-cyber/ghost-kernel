@@ -1,0 +1,5 @@
+data/state.json
+node_modules/
+*.log
+.env
+frontend/.DS_Store
